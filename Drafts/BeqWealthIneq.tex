@@ -1,0 +1,170 @@
+\documentclass[letterpaper,12pt]{article}
+
+\usepackage{threeparttable}
+\usepackage{geometry}
+\geometry{letterpaper,tmargin=1in,bmargin=1in,lmargin=1.25in,rmargin=1.25in}
+\usepackage[format=hang,font=normalsize,labelfont=bf]{caption}
+\usepackage{amsmath}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage[utf8]{inputenc}
+\usepackage{delarray}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{lscape}
+\usepackage{natbib}
+\usepackage{setspace}
+\usepackage{float,color}
+\usepackage[pdftex]{graphicx}
+\usepackage{pdfsync}
+\usepackage{verbatim}
+\usepackage{placeins}
+\usepackage{geometry}
+\usepackage{pdflscape}
+\usepackage[procnames]{listings}
+\synctex=1
+\usepackage{hyperref}
+\hypersetup{colorlinks, linkcolor=red, urlcolor=blue, citecolor=red, pageanchor=false}
+\usepackage{bm}
+\newcommand{\quotes}[1]{``#1''}
+
+
+
+\theoremstyle{definition}
+\newtheorem{theorem}{Theorem}
+\newtheorem{acknowledgement}[theorem]{Acknowledgement}
+\newtheorem{algorithm}[theorem]{Algorithm}
+\newtheorem{axiom}[theorem]{Axiom}
+\newtheorem{case}[theorem]{Case}
+\newtheorem{claim}[theorem]{Claim}
+\newtheorem{conclusion}[theorem]{Conclusion}
+\newtheorem{condition}[theorem]{Condition}
+\newtheorem{conjecture}[theorem]{Conjecture}
+\newtheorem{corollary}[theorem]{Corollary}
+\newtheorem{criterion}[theorem]{Criterion}
+\newtheorem{definition}{Definition} % Number definitions on their own
+\newtheorem{derivation}{Derivation} % Number derivations on their own
+\newtheorem{example}[theorem]{Example}
+\newtheorem{exercise}[theorem]{Exercise}
+\newtheorem{lemma}[theorem]{Lemma}
+\newtheorem{notation}[theorem]{Notation}
+\newtheorem{problem}[theorem]{Problem}
+\newtheorem{proposition}{Proposition} % Number propositions on their own
+\newtheorem{remark}[theorem]{Remark}
+\newtheorem{solution}[theorem]{Solution}
+\newtheorem{summary}[theorem]{Summary}
+\bibliographystyle{aer}
+\newcommand\ve{\varepsilon}
+\renewcommand\theenumi{\roman{enumi}}
+\newcommand\norm[1]{\left\lVert#1\right\rVert}
+\definecolor{codegreen}{rgb}{0,0.6,0}
+\definecolor{codegray}{rgb}{0.5,0.5,0.5}
+\definecolor{codepurple}{rgb}{0.0,0.0, 0.4}
+\definecolor{backcolour}{rgb}{0.99,0.99,0.99}
+
+\lstdefinestyle{mystyle}{
+    backgroundcolor=\color{backcolour},
+    commentstyle=\color{codegreen},
+    keywordstyle=\color{magenta},
+    numberstyle=\tiny\color{codegray},
+    stringstyle=\color{codepurple},
+    basicstyle=\scriptsize,
+    breakatwhitespace=false,
+    breaklines=true,
+    captionpos=b,
+    keepspaces=true,
+    numbers=left,
+    numbersep=5pt,
+    showspaces=false,
+    showstringspaces=false,
+    showtabs=false,
+    tabsize=2
+}
+
+\lstset{style=mystyle}
+
+
+\begin{document}
+
+\begin{titlepage}
+\title{The Effect of Bequests on Wealth Persistence and Inequality across Generations
+       \thanks{
+       We are grateful to the BYU Macroeconomics and Computational Laboratory and to the Open Source Policy Center at the American Enterprise Institute for research support on this project. All Python code and documentation for the computational model is available at \href{https://github.com/rickecon/BeqWealthIneq}{https://github.com/rickecon/BeqWealthIneq}.}
+       }
+\author{
+  Jason DeBacker\footnote{Middle Tennessee State University, Department of Economics and Finance, BAS N306, Murfreesboro, TN 37132, (615) 898-2528,\href{mailto:jason.debacker@mtsu.edu}{jason.debacker@mtsu.edu}.} \\[-2pt]
+  \and
+  Richard W. Evans\footnote{Brigham Young University, Department of Economics, 167 FOB, Provo, Utah 84602, (801) 422-8303, \href{mailto:revans@byu.edu}{revans@byu.edu}.} \\[-2pt]
+  \and
+  Parker Rogers\footnote{Brigham Young University, Department of Economics, 121B FOB, Provo, Utah 84602, \href{mailto:parker.rogers2@gmail.com}{parker.rogers2@gmail.com}.} \\[-2pt]}
+\date{April 2016 \\
+  \scriptsize{(version 16.05.a)}}
+\maketitle
+\vspace{-9mm}
+\begin{abstract}
+\small{Put abstract here.
+
+\vspace{3mm}
+
+\noindent\textit{keywords:}\: bequests, inheritances, inter-vivos transfers.
+
+\vspace{3mm}
+
+\noindent\textit{JEL classification:} C14, C63, D31, D91, E21}
+\end{abstract}
+\thispagestyle{empty}
+\end{titlepage}
+
+
+\begin{spacing}{1.5}
+
+\section{Introduction}\label{SecIntro}
+
+  Put intro. here.
+
+
+\section{Model}\label{SecModel}
+
+  Describe model here. Follow pattern of wealth tax paper model.
+
+
+
+\section{Conclusion}\label{SecConclusion}
+
+  Put conclusion here.
+
+
+
+\clearpage
+
+
+\end{spacing}
+
+
+\newpage
+\bibliography{BeqWealthIneq}
+
+
+% \newpage
+% \renewcommand{\theequation}{A.\arabic{section}.\arabic{equation}}
+%                                                  % redefine the command that creates the section number
+% \renewcommand{\thesection}{A-\arabic{section}}   % redefine the command that creates the equation number
+% \setcounter{equation}{0}                         % reset counter
+% \setcounter{section}{0}                          % reset section number
+% \section*{APPENDIX}                              % use *-form to suppress numbering
+
+% \section{First Appendix Section Title}\label{AppTitle1}
+
+%   Put first Appendix section content here.
+
+
+% \newpage
+% \section{Second Appendix Section Title}\label{AppTitle2}
+
+%   \setcounter{equation}{0}
+
+%   Put second Appendix section content here.
+
+
+
+\end{document}
