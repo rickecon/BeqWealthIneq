@@ -25,6 +25,7 @@ import pickle
 import txfunc
 import elliptical_u_est
 import matplotlib.pyplot as plt
+from KernelEstimator import MVKDE
 
 
 '''
@@ -400,6 +401,7 @@ def get_full_parameters(baseline, guid, user_modifiable, metadata):
     S = int(80)
     J = int(7)
     T = int(2 * S)
+    BQ_dist = MVKDE(S, J ,proportion_matrix = None, filename = 'BQ_dist.txt', plot = False,  bandwidth = .25)
     BW = int(10)
     lambdas = np.array([.25, .25, .2, .1, .1, .09, .01])
     starting_age = 20
