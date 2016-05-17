@@ -186,28 +186,32 @@ def euler_equation_solver(guesses, params):
     --------------------------------------------------------------------
     '''
 
-    r, w, T_H, factor, j, J, S, BQ_dist, beta, sigma, ltilde, g_y,\
+    r, w, T_H, factor, J, S, BQ_dist, beta, sigma, ltilde, g_y,\
                   g_n_ss, tau_payroll, retire, mean_income_data,\
                   h_wealth, p_wealth, m_wealth, b_ellipse, upsilon,\
-                  j, chi_b, chi_n, tau_bq, rho, lambdas, omega_SS, e,\
+                  chi_b, chi_n, tau_bq, rho, lambdas, omega_SS, e,\
                   analytical_mtrs, etr_params, mtrx_params,\
                   mtry_params = params
 
-    b_guess = np.array(guesses[:S])
-    n_guess = np.array(guesses[S:])
-    b_s = np.array([0] + list(b_guess[:-1]))
-    b_splus1 = b_guess
-    b_splus2 = np.array(list(b_guess[1:]) + [0])
+    guesses = guesses.reshape(S, 2*J)
+    b_guess = np.array(guesses[:, :J])
+    n_guess = np.array(guesses[:, J:])
+    b_zeros = np.zeros((1, J))
+    b_s = np.vstack((b_zeros,b_guess[:-1, :]))
+    b_splus1 = np.copy(b_guess)
+    b_splus2 = np.vstack((b_guess[1:, :], b_zeros))
+    omega_SS = omega_SS.reshape(S,1)
+    rho = rho.reshape(S,1)
 
-    BQ_params = (omega_SS, lambdas[j], rho, g_n_ss, 'SS')
+    BQ_params = (omega_SS, lambdas, rho, g_n_ss, 'SS')
     BQ = household.get_BQ(r, b_splus1, BQ_params)
-    theta_params = (e[:,j], J, omega_SS, lambdas[j])
+    theta_params = (e, J, omega_SS, lambdas)
     theta = tax.replacement_rate_vals(n_guess, w, factor, theta_params)
 
-    foc_save_parms = (omega_SS, e[:, j], sigma, BQ_dist[:, j], beta, g_y, chi_b[j], theta, tau_bq[j], rho, lambdas[j], J, S,
+    foc_save_parms = (omega_SS, e, sigma, BQ_dist, beta, g_y, chi_b, theta, tau_bq, rho, lambdas, J, S,
                            analytical_mtrs, etr_params, mtry_params, h_wealth, p_wealth, m_wealth, tau_payroll, retire, 'SS')
     error1 = household.FOC_savings(r, w, b_s, b_splus1, b_splus2, n_guess, BQ, factor, T_H, foc_save_parms)
-    foc_labor_params = (omega_SS, e[:, j], BQ_dist[:, j], sigma, g_y, theta, b_ellipse, upsilon, chi_n, ltilde, tau_bq[j], lambdas[j], J, S,
+    foc_labor_params = (omega_SS, e, BQ_dist, sigma, g_y, theta, b_ellipse, upsilon, chi_n.reshape(S, 1), ltilde, tau_bq, lambdas, J, S,
                             analytical_mtrs, etr_params, mtrx_params, h_wealth, p_wealth, m_wealth, tau_payroll, retire, 'SS')
     error2 = household.FOC_labor(r, w, b_s, b_splus1, n_guess, BQ, factor, T_H, foc_labor_params)
 
@@ -221,18 +225,20 @@ def euler_equation_solver(guesses, params):
     mask3 = b_guess <= 0
     mask4 = np.isnan(n_guess)
     mask5 = np.isnan(b_guess)
+    mask7 = b_guess>=.5
     error2[mask1] = 1e14
     error2[mask2] = 1e14
-    error1[mask3] = 1e14
+    error1[mask3] = -1e14
     error1[mask5] = 1e14
     error2[mask4] = 1e14
+    error1[mask7] = 1e14
 
-    tax1_params = (e[:, j], BQ_dist[:, j], lambdas[j], 'SS', retire, etr_params, h_wealth, p_wealth, 
-                   m_wealth, tau_payroll, theta, tau_bq[j], J, S)
+    tax1_params = (e, BQ_dist, lambdas, 'SS', retire, etr_params, h_wealth, p_wealth, 
+                   m_wealth, tau_payroll, theta, tau_bq, J, S)
     tax1 = tax.total_taxes(r, w, b_s, n_guess, BQ, factor, T_H, None, False, tax1_params)
-    cons_params = (e[:, j], BQ_dist[:, j], lambdas[j], g_y)
+    cons_params = (e, BQ_dist, lambdas, g_y)
     cons = household.get_cons(omega_SS, r, w, b_s, b_splus1, n_guess, BQ, tax1, cons_params)
-    mask6 = cons < 0
+    mask6 = cons <= 0
     error1[mask6] = 1e14
 
 
@@ -286,31 +292,32 @@ def inner_loop(outer_loop_vars, params):
 
     analytical_mtrs, etr_params, mtrx_params, mtry_params = income_tax_params
     chi_b, chi_n = chi_params
+    etr_params = np.tile(np.reshape(etr_params,(S,1,etr_params.shape[1])),(1,J,1))
+    mtrx_params = np.tile(np.reshape(mtrx_params,(S,1,mtrx_params.shape[1])),(1,J,1))
+    mtry_params = np.tile(np.reshape(mtry_params,(S,1,mtry_params.shape[1])),(1,J,1))
 
 
     euler_errors = np.zeros((2*S,J))
 
-    for j in xrange(J):
-        # Solve the euler equations
-        if j == 0:
-            guesses = np.append(bssmat[:, j], nssmat[:, j])
-        else:
-            guesses = np.append(bssmat[:, j-1], nssmat[:, j-1])
-        euler_params = [r, w, T_H, factor, j, J, S, BQ_dist, beta, sigma, ltilde, g_y,\
-                  g_n_ss, tau_payroll, retire, mean_income_data,\
-                  h_wealth, p_wealth, m_wealth, b_ellipse, upsilon,\
-                  j, chi_b, chi_n, tau_bq, rho, lambdas, omega_SS, e,\
-                  analytical_mtrs, etr_params, mtrx_params,\
-                  mtry_params]
+    
+    guesses = np.hstack((bssmat, nssmat))
+    euler_params = [r, w, T_H, factor, J, S, BQ_dist, beta, sigma, ltilde, g_y,\
+              g_n_ss, tau_payroll, retire, mean_income_data,\
+              h_wealth, p_wealth, m_wealth, b_ellipse, upsilon,\
+              chi_b, chi_n, tau_bq, rho, lambdas, omega_SS, e,\
+              analytical_mtrs, etr_params, mtrx_params,\
+              mtry_params]
 
-        [solutions, infodict, ier, message] = opt.fsolve(euler_equation_solver, guesses * .9,
-                                   args=euler_params, xtol=MINIMIZER_TOL, full_output=True)
+    [solutions, infodict, ier, message] = opt.fsolve(euler_equation_solver, guesses * .9,
+                               args=euler_params, xtol=MINIMIZER_TOL, full_output=True)
 
-        euler_errors[:,j] = infodict['fvec']
-        print 'Max Euler errors: ', np.absolute(euler_errors[:,j]).max()
-        
-        bssmat[:, j] = solutions[:S]
-        nssmat[:, j] = solutions[S:]
+    euler_errors = infodict['fvec']
+    print 'Max Euler errors: ', np.absolute(euler_errors).max()
+    euler_errors = euler_errors.reshape(S, 2 *J)
+    solutions = solutions.reshape(S, 2*J)
+    
+    bssmat = solutions[:, :J]
+    nssmat = solutions[:, J:]
 
     K_params = (omega_SS.reshape(S, 1), lambdas.reshape(1, J), g_n_ss, 'SS')
     K = household.get_K(bssmat, K_params)
@@ -534,8 +541,8 @@ def SS_solver(b_guess_init, n_guess_init, wss, rss, T_Hss, factor_ss, params, fs
     household.constraint_checker_SS(bssmat, nssmat, cssmat, ltilde)
 
 
-    euler_savings = euler_errors[:S,:]
-    euler_labor_leisure = euler_errors[S:,:]
+    euler_savings = euler_errors[:,:J]
+    euler_labor_leisure = euler_errors[:,J:]
 
     '''
     ------------------------------------------------------------------------
@@ -775,7 +782,7 @@ def run_SS(income_tax_params, ss_params, iterative_params, chi_params, baseline=
         [wss, rss, T_Hss, factor_ss] = solutions_fsolve
         fsolve_flag = True
         # Return SS values of variables
-        solution_params= [b_guess.reshape(S, J), n_guess.reshape(S, J), chi_params, ss_params, income_tax_params, iterative_params]
+        solution_params = [b_guess.reshape(S, J), n_guess.reshape(S, J), chi_params, ss_params, income_tax_params, iterative_params]
         output = SS_solver(b_guess.reshape(S, J), n_guess.reshape(S, J), wss, rss, T_Hss, factor_ss, ss_params, fsolve_flag)
     else:
         baseline_ss_dir = os.path.join(

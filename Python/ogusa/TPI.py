@@ -82,7 +82,7 @@ def create_tpi_params(**sim_params):
     N_tilde = sim_params['omega'].sum(1) #this should just be one in each year given how we've constructed omega
     sim_params['omega'] = sim_params['omega'] / N_tilde.reshape(sim_params['T'] + sim_params['S'], 1)
 
-    tpi_params = [sim_params['J'], sim_params['S'], sim_params['T'], sim_params['BW'], 
+    tpi_params = [sim_params['J'], sim_params['S'], sim_params['T'], sim_params['BQ_dist'], sim_params['BW'], 
                   sim_params['beta'], sim_params['sigma'], sim_params['alpha'], 
                   sim_params['Z'], sim_params['delta'], sim_params['ltilde'], 
                   sim_params['nu'], sim_params['g_y'], sim_params['g_n_vector'], 
@@ -92,7 +92,7 @@ def create_tpi_params(**sim_params):
     iterative_params = [sim_params['maxiter'], sim_params['mindist_SS'], sim_params['mindist_TPI']]
     
 
-    J, S, T, BW, beta, sigma, alpha, Z, delta, ltilde, nu, g_y,\
+    J, S, T, BQ_dist, BW, beta, sigma, alpha, Z, delta, ltilde, nu, g_y,\
                   g_n_vector, tau_payroll, tau_bq, rho, omega, N_tilde, lambdas, e, retire, mean_income_data,\
                   factor, h_wealth, p_wealth, m_wealth, b_ellipse, upsilon, chi_b, chi_n = tpi_params
 
@@ -138,17 +138,17 @@ def create_tpi_params(**sim_params):
     theta_params = (e, J, omega[0].reshape(S, 1), lambdas)
     theta = tax.replacement_rate_vals(initial_n, w0, factor, theta_params)
 
-    T_H_params = (e, lambdas, omega[0].reshape(S, 1), 'SS', etr_params_TP[:,0,:], 
+    T_H_params = (e, BQ_dist, lambdas, omega[0].reshape(S, 1), 'SS', etr_params_TP[:,0,:], 
                     theta, tau_bq, tau_payroll, h_wealth, p_wealth, m_wealth, retire, T, S, J)
     T_H_0 = tax.get_lump_sum(r0, w0, b_sinit, initial_n, BQ0, factor, T_H_params)
 
     etr_params_3D = np.tile(np.reshape(etr_params_TP[:,0,:],(S,1,etr_params_TP.shape[2])),(1,J,1))
-    tax0_params = (e, lambdas, 'SS', retire, etr_params_3D, h_wealth, p_wealth, m_wealth, 
+    tax0_params = (e, BQ_dist, lambdas, 'SS', retire, etr_params_3D, h_wealth, p_wealth, m_wealth, 
                     tau_payroll, theta, tau_bq, J, S)
     tax0 = tax.total_taxes(r0, w0, b_sinit, initial_n, BQ0, factor, T_H_0, None, False, tax0_params)
 
-    c0_params = (e, lambdas.reshape(1, J), g_y)
-    c0 = household.get_cons(r0, w0, b_sinit, b_splus1init, initial_n, BQ0.reshape(
+    c0_params = (e, BQ_dist, lambdas.reshape(1, J), g_y)
+    c0 = household.get_cons(omega[0].reshape(S, 1), r0, w0, b_sinit, b_splus1init, initial_n, BQ0.reshape(
         1, J), tax0, c0_params)
 
     initial_values = (K0, b_sinit, b_splus1init, L0, Y0,
@@ -181,7 +181,7 @@ def firstdoughnutring(guesses, r, w, b, BQ, T_H, j, params):
     # unpack tuples of parameters
     income_tax_params, tpi_params, initial_b = params
     analytical_mtrs, etr_params, mtrx_params, mtry_params = income_tax_params
-    J, S, T, BW, beta, sigma, alpha, Z, delta, ltilde, nu, g_y,\
+    J, S, T, BQ_dist, BW, beta, sigma, alpha, Z, delta, ltilde, nu, g_y,\
                   g_n_vector, tau_payroll, tau_bq, rho, omega, N_tilde, lambdas, e, retire, mean_income_data,\
                   factor, h_wealth, p_wealth, m_wealth, b_ellipse, upsilon, chi_b, chi_n = tpi_params
 
@@ -195,11 +195,11 @@ def firstdoughnutring(guesses, r, w, b, BQ, T_H, j, params):
     # theta = tax.replacement_rate_vals(n, w, factor, theta_params)
     theta = np.zeros((J,))
 
-    tax1_params = (e[-1, j], lambdas[j], 'TPI_scalar', retire, etr_params[-1,0,:], h_wealth, p_wealth, m_wealth, tau_payroll, theta, tau_bq, J, S)
+    tax1_params = (e[-1, j], BQ_dist[-1, j], lambdas[j], 'TPI_scalar', retire, etr_params[-1,0,:], h_wealth, p_wealth, m_wealth, tau_payroll, theta, tau_bq, J, S)
     tax1 = tax.total_taxes(r, w, b_s, n, BQ, factor, T_H, j, False, tax1_params) 
 
-    cons_params = (e[-1, j], lambdas[j], g_y)
-    cons = household.get_cons(r, w, b_s, b_splus1, n, BQ, tax1, cons_params)
+    cons_params = (e[-1, j], BQ_dist[-1, j], lambdas[j], g_y)
+    cons = household.get_cons(omega[0,-1], r, w, b_s, b_splus1, n, BQ, tax1, cons_params)
 
     bequest_ut = rho[-1] * np.exp(-sigma * g_y) * chi_b[j] * b_splus1 ** (-sigma)
     error1 = household.marg_ut_cons(cons, sigma) - bequest_ut
@@ -223,7 +223,6 @@ def firstdoughnutring(guesses, r, w, b, BQ, T_H, j, params):
     # error4 = household.FOC_labor(r, w, b, b_splus1, n, BQ, factor, T_H, foc_labor_params) 
     # print 'check1:', error2-error4
     # print 'check2:', error1-error3  
-
     if n <= 0 or n >= 1:
         error2 += 1e12
     if b_splus1 <= 0:
@@ -248,7 +247,7 @@ def twist_doughnut(guesses, r, w, BQ, T_H, j, s, t, params):
         params = list of parameters (list)
         theta = replacement rates (Jx1 array)
         tau_bq = bequest tax rate (Jx1 array)
-        rho = mortalit rate (Sx1 array)
+        rho = mortality rate (Sx1 array)
         lambdas = ability weights (Jx1 array)
         e = ability type (SxJ array)
         initial_b = capital stock distribution in period 0 (SxJ array)
@@ -260,7 +259,7 @@ def twist_doughnut(guesses, r, w, BQ, T_H, j, s, t, params):
 
     income_tax_params, tpi_params, initial_b = params
     analytical_mtrs, etr_params, mtrx_params, mtry_params = income_tax_params
-    J, S, T, BW, beta, sigma, alpha, Z, delta, ltilde, nu, g_y,\
+    J, S, T, BQ_dist, BW, beta, sigma, alpha, Z, delta, ltilde, nu, g_y,\
                   g_n_vector, tau_payroll, tau_bq, rho, omega, N_tilde, lambdas, e, retire, mean_income_data,\
                   factor, h_wealth, p_wealth, m_wealth, b_ellipse, upsilon, chi_b, chi_n = tpi_params
 
@@ -287,26 +286,28 @@ def twist_doughnut(guesses, r, w, BQ, T_H, j, s, t, params):
     BQ_splus1 = BQ[t + 1:t + length + 1]
     T_H_s = T_H[t:t + length]
     T_H_splus1 = T_H[t + 1:t + length + 1]
+    omega = omega[t, -length:]
+    BQ_dist = BQ_dist[-length:, j]
     # Savings euler equations
 
     # theta_params = (e[-1, j], 1, omega[0].reshape(S, 1), lambdas[j])
     # theta = tax.replacement_rate_vals(n, w, factor, theta_params)
     theta = np.zeros((J,)) 
 
-    tax_s_params = (e_s, lambdas[j], 'TPI', retire, etr_params, h_wealth, p_wealth, m_wealth, tau_payroll, theta, tau_bq, J, S)
+    tax_s_params = (e_s, BQ_dist, lambdas[j], 'TPI', retire, etr_params, h_wealth, p_wealth, m_wealth, tau_payroll, theta, tau_bq, J, S)
     tax_s = tax.total_taxes(r_s, w_s, b_s, n_s, BQ_s, factor, T_H_s, j, False, tax_s_params) 
 
     etr_params_sp1 = np.append(etr_params,np.reshape(etr_params[-1,:],(1,etr_params.shape[1])),axis=0)[1:,:]
-    taxsp1_params = (e_extended, lambdas[j], 'TPI', retire, etr_params_sp1, h_wealth, p_wealth, m_wealth, tau_payroll, theta, tau_bq, J, S)
+    taxsp1_params = (e_extended, BQ_dist, lambdas[j], 'TPI', retire, etr_params_sp1, h_wealth, p_wealth, m_wealth, tau_payroll, theta, tau_bq, J, S)
     tax_splus1 = tax.total_taxes(r_splus1, w_splus1, b_splus1, n_extended, BQ_splus1, factor, T_H_splus1, j, True, taxsp1_params) 
 
 
-    cons_s_params = (e_s, lambdas[j], g_y)
-    cons_s = household.get_cons(r_s, w_s, b_s, b_splus1, n_s, 
+    cons_s_params = (e_s, BQ_dist, lambdas[j], g_y)
+    cons_s = household.get_cons(omega, r_s, w_s, b_s, b_splus1, n_s, 
                    BQ_s, tax_s, cons_s_params)
 
-    cons_sp1_params = (e_extended, lambdas[j], g_y)
-    cons_splus1 = household.get_cons(r_splus1, w_splus1, b_splus1, b_splus2, n_extended, 
+    cons_sp1_params = (e_extended, BQ_dist, lambdas[j], g_y)
+    cons_splus1 = household.get_cons(omega, r_splus1, w_splus1, b_splus1, b_splus2, n_extended, 
                    BQ_splus1, tax_splus1, cons_sp1_params)
 
     income_splus1 = (r_splus1 * b_splus1 + w_splus1 *
@@ -372,7 +373,7 @@ def inner_loop(guesses, outer_loop_vars, params):
     #unpack variables and parameters pass to function
     income_tax_params, tpi_params, initial_values, theta, ind = params
     analytical_mtrs, etr_params, mtrx_params, mtry_params = income_tax_params
-    J, S, T, BW, beta, sigma, alpha, Z, delta, ltilde, nu, g_y,\
+    J, S, T, BQ_dist, BW, beta, sigma, alpha, Z, delta, ltilde, nu, g_y,\
                   g_n_vector, tau_payroll, tau_bq, rho, omega, N_tilde, lambdas, e, retire, mean_income_data,\
                   factor, h_wealth, p_wealth, m_wealth, b_ellipse, upsilon, chi_b, chi_n = tpi_params
     K0, b_sinit, b_splus1init, L0, Y0,\
@@ -462,7 +463,7 @@ def run_TPI(income_tax_params, tpi_params, iterative_params, initial_values, SS_
     # unpack tuples of parameters
     analytical_mtrs, etr_params, mtrx_params, mtry_params = income_tax_params
     maxiter, mindist_SS, mindist_TPI = iterative_params
-    J, S, T, BW, beta, sigma, alpha, Z, delta, ltilde, nu, g_y,\
+    J, S, T, BQ_dist, BW, beta, sigma, alpha, Z, delta, ltilde, nu, g_y,\
                   g_n_vector, tau_payroll, tau_bq, rho, omega, N_tilde, lambdas, e, retire, mean_income_data,\
                   factor, h_wealth, p_wealth, m_wealth, b_ellipse, upsilon, chi_b, chi_n = tpi_params
     K0, b_sinit, b_splus1init, L0, Y0,\
@@ -574,7 +575,7 @@ def run_TPI(income_tax_params, tpi_params, iterative_params, initial_values, SS_
         for i in range(etr_params.shape[2]):
             TH_tax_params[:,:,:,i] = np.tile(np.reshape(np.transpose(etr_params[:,:T,i]),(T,S,1)),(1,1,J))
 
-        T_H_params = (np.tile(e.reshape(1, S, J),(T,1,1)), lambdas.reshape(1, 1, J), omega[:T].reshape(T, S, 1), 'TPI', 
+        T_H_params = (np.tile(e.reshape(1, S, J),(T,1,1)), BQ_dist, lambdas.reshape(1, 1, J), omega[:T].reshape(T, S, 1), 'TPI', 
                 TH_tax_params, theta, tau_bq, tau_payroll, h_wealth, p_wealth, m_wealth, retire, T, S, J)
         T_H_new = np.array(list(tax.get_lump_sum(np.tile(rnew[:T].reshape(T, 1, 1),(1,S,J)), np.tile(wnew[:T].reshape(T, 1, 1),(1,S,J)),
                bmat_s, n_mat[:T,:,:], BQnew[:T].reshape(T, 1, J), factor, T_H_params)) + [T_Hss] * S)
@@ -624,13 +625,13 @@ def run_TPI(income_tax_params, tpi_params, iterative_params, initial_values, SS_
     etr_params_path = np.zeros((T,S,J,etr_params.shape[2]))
     for i in range(etr_params.shape[2]):
         etr_params_path[:,:,:,i] = np.tile(np.reshape(np.transpose(etr_params[:,:T,i]),(T,S,1)),(1,1,J))
-    tax_path_params = (np.tile(e.reshape(1, S, J),(T,1,1)), lambdas, 'TPI', retire, etr_params_path, h_wealth, 
+    tax_path_params = (np.tile(e.reshape(1, S, J),(T,1,1)), BQ_dist, lambdas, 'TPI', retire, etr_params_path, h_wealth, 
                        p_wealth, m_wealth, tau_payroll, theta, tau_bq, J, S)
     tax_path = tax.total_taxes(np.tile(r[:T].reshape(T, 1, 1),(1,S,J)), np.tile(w[:T].reshape(T, 1, 1),(1,S,J)), bmat_s, 
                                n_mat[:T,:,:], BQ[:T, :].reshape(T, 1, J), factor, T_H[:T].reshape(T, 1, 1), None, False, tax_path_params) 
 
-    cons_params = (e.reshape(1, S, J), lambdas.reshape(1, 1, J), g_y)
-    c_path = household.get_cons(r[:T].reshape(T, 1, 1), w[:T].reshape(T, 1, 1), bmat_s, bmat_splus1, n_mat[:T,:,:], 
+    cons_params = (e.reshape(1, S, J), BQ_dist, lambdas.reshape(1, 1, J), g_y)
+    c_path = household.get_cons(omega[:T].reshape(T,S,1), r[:T].reshape(T, 1, 1), w[:T].reshape(T, 1, 1), bmat_s, bmat_splus1, n_mat[:T,:,:], 
                    BQ[:T].reshape(T, 1, J), tax_path, cons_params)
     C_params = (omega[:T].reshape(T, S, 1), lambdas, 'TPI')
     C = household.get_C(c_path, C_params)

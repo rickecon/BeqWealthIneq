@@ -276,6 +276,7 @@ def get_reduced_parameters(baseline, guid, user_modifiable, metadata):
     S = int(ending_age-starting_age)
     J = int(2)
     T = int(2 * S)
+    BQ_dist = MVKDE(S, J ,proportion_matrix = None, filename = 'BQ_dist.txt', plot = False,  bandwidth = .25)
     BW = int(10)
     lambdas = np.array([.50, .50])
     E = int(starting_age * (S / float(ending_age - starting_age)))

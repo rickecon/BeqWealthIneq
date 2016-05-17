@@ -223,9 +223,12 @@ def tau_income(r, w, b, n, factor, params):
     y = (r*b)*factor
     I = x+y
 
+
+
+
     phi = x/I
     Phi = phi*(max_x-min_x) + (1-phi)*(max_y-min_y)
-    K = phi*min_x + (1-phi)*min_y
+    K = phi*min_x+ (1-phi)*min_y
 
     num = (A*(x**2)) + (B*(y**2)) + (C*x*y) + (D*x) + (E*y)
     denom = (A*(x**2)) + (B*(y**2)) + (C*x*y) + (D*x) + (E*y) + F
@@ -567,7 +570,7 @@ def get_lump_sum(r, w, b, n, BQ, factor, params):
     if I.ndim == 2: 
         T_I = np.zeros((S,J))
         for j in xrange(J):
-            TI_params = (e[:,j], etr_params)
+            TI_params = (e[:,j], etr_params[:,j])
             T_I[:,j] = tau_income(r, w, b[:,j], n[:,j], factor, TI_params) * I[:,j]
     if I.ndim == 3:
         T_I = np.zeros((T,S,J))
@@ -640,7 +643,6 @@ def total_taxes(r, w, b, n, BQ, factor, T_H, j, shift, params):
     '''
 
     e, BQ_dist, lambdas, method, retire, etr_params, h_wealth, p_wealth, m_wealth, tau_payroll, theta, tau_bq, J, S = params
-
     I = r * b + w * e * n
     TI_params = (e, etr_params)
     T_I = tau_income(r, w, b, n, factor, TI_params) * I
@@ -669,7 +671,7 @@ def total_taxes(r, w, b, n, BQ, factor, T_H, j, shift, params):
             retireTPI = (retire - 1 - S)
         if len(b.shape) != 3:
             T_P[retireTPI:] -= theta[j] * w[retireTPI:]
-            T_BQ = tau_bq[j] * BQ * np.sum(BQ_dist, axis = 0)[j]
+            T_BQ = tau_bq[j] * BQ * np.sum(BQ_dist, axis = 0)
 
         else:
             T_P[:, retire:, :] -= theta.reshape(1, 1, J) * w[:,retire:,:]
