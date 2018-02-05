@@ -63,7 +63,7 @@ def runner(output_base, baseline_dir, baseline=False, analytical_mtrs=True, age_
     # List of parameter names that will not be changing (unless we decide to
     # change them for a tax experiment)
 
-    param_names = ['S', 'J', 'T', 'BW', 'lambdas', 'starting_age', 'ending_age',
+    param_names = ['S', 'J', 'T', 'BQ_dist', 'BW', 'lambdas', 'starting_age', 'ending_age',
                 'beta', 'sigma', 'alpha', 'nu', 'Z', 'delta', 'E',
                 'ltilde', 'g_y', 'maxiter', 'mindist_SS', 'mindist_TPI',
                 'analytical_mtrs', 'b_ellipse', 'k_ellipse', 'upsilon',
@@ -86,24 +86,24 @@ def runner(output_base, baseline_dir, baseline=False, analytical_mtrs=True, age_
     sim_params['output_dir'] = output_base
     sim_params['run_params'] = run_params
 
-    income_tax_params, ss_parameters, iterative_params, chi_params = SS.create_steady_state_parameters(**sim_params)
+    # income_tax_params, ss_parameters, iterative_params, chi_params = SS.create_steady_state_parameters(**sim_params)
 
-    ss_outputs = SS.run_SS(income_tax_params, ss_parameters, iterative_params, chi_params, baseline, 
-                                     baseline_dir=baseline_dir)
+    # ss_outputs = SS.run_SS(income_tax_params, ss_parameters, iterative_params, chi_params, baseline, 
+    #                                  baseline_dir=baseline_dir)
 
-    '''
-    ------------------------------------------------------------------------
-        Pickle SS results 
-    ------------------------------------------------------------------------
-    '''
-    if baseline:
-        utils.mkdirs(os.path.join(baseline_dir, "SS"))
-        ss_dir = os.path.join(baseline_dir, "SS/SS_vars.pkl")
-        pickle.dump(ss_outputs, open(ss_dir, "wb"))
-    else:
-        utils.mkdirs(os.path.join(output_base, "SS"))
-        ss_dir = os.path.join(output_base, "SS/SS_vars.pkl")
-        pickle.dump(ss_outputs, open(ss_dir, "wb"))
+    # '''
+    # ------------------------------------------------------------------------
+    #     Pickle SS results 
+    # ------------------------------------------------------------------------
+    # '''
+    # if baseline:
+    #     utils.mkdirs(os.path.join(baseline_dir, "SS"))
+    #     ss_dir = os.path.join(baseline_dir, "SS/SS_vars.pkl")
+    #     pickle.dump(ss_outputs, open(ss_dir, "wb"))
+    # else:
+    #     utils.mkdirs(os.path.join(output_base, "SS"))
+    #     ss_dir = os.path.join(output_base, "SS/SS_vars.pkl")
+    #     pickle.dump(ss_outputs, open(ss_dir, "wb"))
 
 
     '''
@@ -202,7 +202,7 @@ def runner_SS(output_base, baseline_dir, baseline=False, analytical_mtrs=True, a
     # List of parameter names that will not be changing (unless we decide to
     # change them for a tax experiment)
 
-    param_names = ['S', 'J', 'T', 'BW', 'lambdas', 'starting_age', 'ending_age',
+    param_names = ['S', 'J', 'T', 'BQ_dist', 'BW', 'lambdas', 'starting_age', 'ending_age',
                 'beta', 'sigma', 'alpha', 'nu', 'Z', 'delta', 'E',
                 'ltilde', 'g_y', 'maxiter', 'mindist_SS', 'mindist_TPI',
                 'analytical_mtrs', 'b_ellipse', 'k_ellipse', 'upsilon',

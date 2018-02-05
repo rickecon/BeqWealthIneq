@@ -79,7 +79,7 @@ def get_BQ(r, b_splus1, params):
 
     BQ_presum = b_splus1 * omega * rho * lambdas
     if method == 'SS':
-        BQ = BQ_presum.sum(0)
+        BQ = BQ_presum.sum()
     elif method == 'TPI':
         BQ = BQ_presum.sum(1)
     BQ *= (1.0 + r) / (1.0 + g_n)
@@ -143,7 +143,7 @@ def marg_ut_labor(n, params):
     return output
 
 
-def get_cons(r, w, b, b_splus1, n, BQ, net_tax, params):
+def get_cons(omega, r, w, b, b_splus1, n, BQ, net_tax, params):
     '''
     Calculation of househld consumption.
 
@@ -167,10 +167,9 @@ def get_cons(r, w, b, b_splus1, n, BQ, net_tax, params):
 
     Returns: cons
     '''
-    e, lambdas, g_y = params
-    
-    cons = (1 + r) * b + w * e * n + BQ / \
-        lambdas - b_splus1 * np.exp(g_y) - net_tax
+    e, BQ_dist, lambdas, g_y = params
+    cons = (1 + r) * b + w * e * n + (BQ * BQ_dist) / \
+        (lambdas * omega) - b_splus1 * np.exp(g_y) - net_tax
     return cons
 
 
@@ -258,9 +257,8 @@ def FOC_savings(r, w, b, b_splus1, b_splus2, n, BQ, factor, T_H, params):
 
     Returns: euler
     '''
-    e, sigma, beta, g_y, chi_b, theta, tau_bq, rho, lambdas, J, S, \
+    omega, e, sigma, BQ_dist, beta, g_y, chi_b, theta, tau_bq, rho, lambdas, J, S, \
         analytical_mtrs, etr_params, mtry_params, h_wealth, p_wealth, m_wealth, tau_payroll, retire, method = params
-
     # In order to not have 2 savings euler equations (one that solves the first S-1 equations, and one that solves the last one),
     # we combine them.  In order to do this, we have to compute a consumption term in period t+1, which requires us to have a shifted
     # e and n matrix.  We append a zero on the end of both of these so they will be the right size.  We could append any value to them,
@@ -272,10 +270,13 @@ def FOC_savings(r, w, b, b_splus1, b_splus2, n, BQ, factor, T_H, params):
         etr_params_to_use = etr_params
         mtry_params_to_use = mtry_params
     else:
-        e_extended = np.array(list(e) + [0])
-        n_extended = np.array(list(n) + [0])
-        etr_params_to_use = np.append(etr_params,np.reshape(etr_params[-1,:],(1,etr_params.shape[1])),axis=0)[1:,:]
-        mtry_params_to_use = np.append(mtry_params,np.reshape(mtry_params[-1,:],(1,mtry_params.shape[1])),axis=0)[1:,:]
+        zeros = np.zeros((1, J))
+        e_extended = np.vstack((e , zeros ))
+        n_extended = np.vstack((n ,zeros))
+        etr_params_to_use = etr_params
+        mtry_params_to_use = mtry_params
+        # etr_params_to_use = np.append(etr_params,np.reshape(etr_params[-1,:],(1,etr_params.shape[1])),axis=0)[1:,:]
+        # mtry_params_to_use = np.append(mtry_params,np.reshape(mtry_params[-1,:],(1,mtry_params.shape[1])),axis=0)[1:,:]
     
     # tax1_params = (e, lambdas, method, retire, etr_params, h_wealth, p_wealth, m_wealth, tau_payroll, theta, tau_bq, J, S)
     # tax1 = tax.total_taxes(r, w, b, n, BQ, factor, T_H, None, False, tax1_params)
@@ -291,26 +292,28 @@ def FOC_savings(r, w, b, b_splus1, b_splus2, n, BQ, factor, T_H, params):
     # mtr_cap_params = (e_extended[1:], np.append(etr_params,np.reshape(etr_params[-1,:],(1,etr_params.shape[1])),axis=0)[1:,:],
     #                   np.append(mtry_params,np.reshape(mtry_params[-1,:],(1,mtry_params.shape[1])),axis=0)[1:,:],analytical_mtrs)
     # deriv = (1+r) - r*(tax.MTR_capital(r, w, b_splus1, n_extended[1:], factor, mtr_cap_params))
-
-    tax1_params = (e, lambdas, method, retire, etr_params, h_wealth, p_wealth, m_wealth, tau_payroll, theta, tau_bq, J, S)
+    tax1_params = (e, BQ_dist, lambdas, method, retire, etr_params, h_wealth, p_wealth, m_wealth, tau_payroll, theta, tau_bq, J, S)
     tax1 = tax.total_taxes(r, w, b, n, BQ, factor, T_H, None, False, tax1_params)
-    tax2_params = (e_extended[1:], lambdas, method, retire, 
+    tax2_params = (e_extended[1:, :], BQ_dist, lambdas, method, retire, 
                    etr_params_to_use, h_wealth, p_wealth, m_wealth, tau_payroll, theta, tau_bq, J, S)
-    tax2 = tax.total_taxes(r, w, b_splus1, n_extended[1:], BQ, factor, T_H, None, True, tax2_params)
-    cons1_params = (e, lambdas, g_y)
-    cons1 = get_cons(r, w, b, b_splus1, n, BQ, tax1, cons1_params)
-    cons2_params = (e_extended[1:], lambdas, g_y)
-    cons2 = get_cons(r, w, b_splus1, b_splus2, n_extended[1:], BQ, tax2, cons2_params)
+    tax2 = tax.total_taxes(r, w, b_splus1, n_extended[1:, :], BQ, factor, T_H, None, True, tax2_params)
+    cons1_params = (e, BQ_dist, lambdas, g_y)
+    cons1 = get_cons(omega, r, w, b, b_splus1, n, BQ, tax1, cons1_params)
+    cons2_params = (e_extended[1:, :], BQ_dist, lambdas, g_y)
+    cons2 = get_cons(omega, r, w, b_splus1, b_splus2, n_extended[1:, :], BQ, tax2, cons2_params)
 
-    mtr_cap_params = (e_extended[1:], etr_params_to_use,
-                      mtry_params_to_use,analytical_mtrs)
-    deriv = (1+r) - r*(tax.MTR_capital(r, w, b_splus1, n_extended[1:], factor, mtr_cap_params))
+    mtr_cap_params = (e_extended[1:, :], etr_params_to_use,
+                      mtry_params_to_use, analytical_mtrs)
+    deriv = (1+r) - r*(tax.MTR_capital(r, w, b_splus1, n_extended[1:, :], factor, mtr_cap_params))
 
     savings_ut = rho * np.exp(-sigma * g_y) * chi_b * b_splus1 ** (-sigma)
 
     # Again, note timing in this equation, the (1-rho) term will zero out in the last period, so the last entry of cons2 can be complete
     # gibberish (which it is).  It just has to exist so cons2 is the right
     # size to match all other arrays in the equation.
+    # print marg_ut_cons(cons1, sigma).shape, np.exp(-sigma * g_y).shape, savings_ut.shape, beta.shape, (1 - rho).shape, deriv.shape, marg_ut_cons(
+    #     cons2, sigma).shape
+
     euler = marg_ut_cons(cons1, sigma) - beta * (1 - rho) * deriv * marg_ut_cons(
         cons2, sigma) * np.exp(-sigma * g_y) - savings_ut
 
@@ -371,14 +374,14 @@ def FOC_labor(r, w, b, b_splus1, n, BQ, factor, T_H, params):
 
     Returns: euler
     '''
-    e, sigma, g_y, theta, b_ellipse, upsilon, chi_n, ltilde, tau_bq, lambdas, J, S, \
+    omega, e, BQ_dist, sigma, g_y, theta, b_ellipse, upsilon, chi_n, ltilde, tau_bq, lambdas, J, S, \
         analytical_mtrs, etr_params, mtrx_params, h_wealth, p_wealth, m_wealth, tau_payroll, retire, method  = params
 
-    tax1_params = (e, lambdas, method, retire, etr_params, h_wealth, p_wealth, 
+    tax1_params = (e, BQ_dist, lambdas, method, retire, etr_params, h_wealth, p_wealth, 
                   m_wealth, tau_payroll, theta, tau_bq, J, S)
     tax1 = tax.total_taxes(r, w, b, n, BQ, factor, T_H, None, False, tax1_params)
-    cons_params = (e, lambdas, g_y)
-    cons = get_cons(r, w, b, b_splus1, n, BQ, tax1, cons_params)  
+    cons_params = (e, BQ_dist, lambdas, g_y)
+    cons = get_cons(omega, r, w, b, b_splus1, n, BQ, tax1, cons_params)  
     mtr_lab_params = (e, etr_params, mtrx_params, analytical_mtrs)
     deriv = (1 - tau_payroll - tax.MTR_labor(r, b, w, n, factor, mtr_lab_params))
         
